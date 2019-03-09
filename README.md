@@ -40,7 +40,7 @@ label data
 
 A UI should appear and you can begin labeling.
 
-The labeled image is copied to the directory matching its label.
+The labeled image is moved to the directory matching its label.
 
 If you only want to label unlabeled things:
 
