@@ -14,6 +14,7 @@
         Click the left/right half of the view to go to the prev/next thing
         Click label buttons or press the number shortcut to label
         Enter a label in the text field to label
+        Escape to exit
 """
 from pathlib import Path
 import argparse
