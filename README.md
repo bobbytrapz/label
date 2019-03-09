@@ -1,8 +1,8 @@
 A simple labeling utility in one file that only depends on the standard library.
 
-It's not pretty but it should work.
+**Work is still in progress and it is not well tested.**
 
-*Work is still in progress and it is not well tested.*
+It's not pretty either.
 
 I want to support video labeling in the future.
 
@@ -12,7 +12,7 @@ Just save [label](/label?raw=true) to where you need it.
 
 ## Important notes
 
-Please keep in mind files are moved while labeling. You probably want to keep a backups.
+Please keep in mind files are moved while labeling. You probably want to keep a backup of your data before labeling.
 
 To give a unique filename to all the unlabeled files run:
 
