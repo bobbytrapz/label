@@ -123,17 +123,6 @@ class App(ttk.Frame):
             self.next()
             return
 
-        if label is not None:
-            # try to unlabel
-            try:
-                d = self.data_dir / label / path.name
-                d.unlink()
-            except FileNotFoundError:
-                print('[unlink]', str(d), 'not found')
-                pass
-            else:
-                print('[unlink]', str(d))
-
         if new_label == "":
             # skip this one
             self.next()
@@ -145,10 +134,10 @@ class App(ttk.Frame):
             self.entry_var.set(new_label)
             return
 
-        # copy image to label directory
+        # move image to label directory
         out = self.data_dir / new_label / path.name
         print("[label]", self.name, '=>', out)
-        self.image.save(str(out))
+        path.rename(out)
         self.next()
 
     @property
