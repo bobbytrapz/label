@@ -1,12 +1,14 @@
 A simple labeling utility in one file that only depends on the standard library.
 
-It's not pretty but it should work. Work is still in progress it is not well tested.
+It's not pretty but it should work.
+
+*Work is still in progress and it is not well tested.*
 
 I want to support video labeling in the future.
 
 ## Install
 
-Just copy [label](/label?raw=true) to where you need it.
+Just save [label](/label?raw=true) to where you need it.
 
 ## Important notes
 
