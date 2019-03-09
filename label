@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""
+    Tool for manually labeling things from a directory tree
+    Example:
+    # is a directory looks like this
+    data/
+        _unlabeled/
+        label0/
+        label1/
+    # we can run this (esc to exit)
+    $ label data
+
+    Controls:
+        Click the left/right half of the view to go to the prev/next thing
+        Click label buttons or press the number shortcut to label
+        Enter a label in the text field to label
+"""
+from pathlib import Path
+import argparse
+import sys
+
+from PIL import Image, ImageTk
+import tkinter as tk
+from tkinter import ttk
+
+IMAGE_EXTENSIONS = (
+    "jpg",
+    "jpeg",
+    "png",
+)
+
+
+class App(ttk.Frame):
+    LABEL_COL = 0
+    VIEW_COL = 1
+
+    def __init__(self, root, data_dir, labels, things):
+        # frame
+        ttk.Frame.__init__(self, root)
+
+        self.main = root
+        self.data_dir = Path(data_dir)
+        self.things = list(things)
+        self.labels = list(labels)
+
+        self.labeling = ttk.Frame(self.main)
+        self.labeling.pack(side="left", expand=True, fill="both")
+
+        self.viewing = ttk.Frame(self.main)
+        self.viewing.pack(side="right", expand=True, fill="both")
+
+        # ui label entry/buttons
+        self.entry_var = tk.StringVar()
+        self.entry = ttk.Entry(self.labeling, textvariable=self.entry_var)
+        self.entry.pack(side="bottom", fill="x", ipady=10)
+
+        self.entry.bind("<Return>", lambda _: self.set_label())
+
+        self._make_buttons()
+
+        # canvas
+        self.canvas = tk.Canvas(self.viewing, bd=0, highlightthickness=0)
+        self.canvas.pack(side="top", fill="both", expand=True)
+        self.canvas.bind('<Configure>', self._canvas_resize)
+
+        # filename label
+        self.title_var = tk.StringVar()
+        self.title = ttk.Label(self.viewing, textvariable=self.title_var)
+        self.title.pack(side="bottom", anchor=tk.W)
+
+        # unfocus entry
+        self.title.bind('<ButtonPress>', lambda _: self.main.focus())
+        self.canvas.bind('<ButtonPress>', self._canvas_click)
+        self.main.bind('<Left>', lambda _: self.prev())
+        self.main.bind('<Right>', lambda _: self.next())
+
+        # load image
+        self.ndx = 0
+        self._load()
+
+    def _make_buttons(self):
+        # add/bind label buttons
+        for i, l in enumerate(self.labels):
+            if i <= 10:
+                def cmd(*args, label=l):
+                    self.set_label(label)
+                self.main.bind(str(i), cmd)
+                text = "[{}] {}".format(i, l)
+            b = ttk.Button(self.labeling, text=text, command=cmd)
+            b.pack(side="top", fill="both", expand=True)
+
+        # add gaps
+        for c in self.winfo_children():
+            c.grid_configure(padx=7, pady=7)
+
+    @property
+    def thing(self):
+        ndx = min(self.ndx, len(self.things) - 1)
+        return self.things[ndx]
+
+    @property
+    def name(self):
+        ndx = min(self.ndx, len(self.things) - 1)
+        return str(self.things[ndx][0])
+
+    @property
+    def label(self):
+        ndx = min(self.ndx, len(self.things) - 1)
+        return self.things[ndx][1]
+
+    def set_label(self, new_label=None):
+        if self.is_done:
+            return
+
+        path, label = self.thing
+        new_label = new_label or self.entry_var.get()
+        self.things[self.ndx] = (path, new_label)
+        self.entry_var.set("")
+
+        if label == new_label:
+            # same label so just go to next one
+            self.next()
+            return
+
+        if label is not None:
+            # try to unlabel
+            try:
+                d = self.data_dir / label / path.name
+                d.unlink()
+            except FileNotFoundError:
+                print('[unlink]', str(d), 'not found')
+                pass
+            else:
+                print('[unlink]', str(d))
+
+        if new_label == "":
+            # skip this one
+            self.next()
+            return
+
+        if new_label not in self.labels:
+            print("[label]", "invalid label '{}'".format(new_label))
+            # reset entry field so user may correct input
+            self.entry_var.set(new_label)
+            return
+
+        # copy image to label directory
+        out = self.data_dir / new_label / path.name
+        print("[label]", self.name, '=>', out)
+        self.image.save(str(out))
+        self.next()
+
+    @property
+    def is_done(self):
+        return self.ndx == len(self.things)
+
+    def show_done(self):
+        self.canvas.delete(tk.ALL)
+        self.title_var.set("DONE")
+        w, h = self.canvas.winfo_width(), self.canvas.winfo_width()
+        self.canvas.create_text(
+            w // 2, h // 4,
+            fill="red",
+            font="Times 20 italic bold",
+            text="DONE", tags="text")
+
+    def next(self):
+        if self.ndx + 1 >= len(self.things):
+            self.ndx = len(self.things)
+            self.show_done()
+            return
+        self.ndx = min(len(self.things) - 1, self.ndx + 1)
+        self._load()
+
+    def prev(self):
+        if self.ndx == 0:
+            return
+        self.ndx = max(0, self.ndx - 1)
+        self._load()
+
+    def _scaled_image(self, new_size):
+        size = self.image.width, self.image.height
+        ratio = min(new_size[0] / size[0], new_size[1] / size[1])
+        size = (size[0] * ratio, size[1] * ratio)
+        size = (max(1, int(size[0])), max(1, int(size[1])))
+        return self.image.resize(size, Image.ANTIALIAS)
+
+    def _canvas_click(self, ev):
+        if ev.x <= self.canvas.winfo_width() // 2:
+            self.prev()
+        else:
+            self.next()
+
+        self.main.focus()
+
+    def _canvas_resize(self, ev):
+        if self.is_done:
+            self.show_done()
+            return
+
+        self.canvas.delete(tk.ALL)
+        if self.image is None:
+            return
+
+        new_size = ev.width, ev.height
+        resized = self._scaled_image(new_size)
+        self.photo = ImageTk.PhotoImage(resized)
+        self.canvas.create_image(
+            0, 0, image=self.photo, anchor=tk.NW, tags="image")
+
+    def _load(self):
+        if self.is_done:
+            self.show_done()
+            return
+
+        self.canvas.delete(tk.ALL)
+        self.title_var.set("{} [{} of {}]".format(
+            self.name, self.ndx, len(self.things)))
+        self.image = Image.open(self.name)
+
+        new_size = self.canvas.winfo_width(), self.canvas.winfo_width()
+        resized = self._scaled_image(new_size)
+        self.photo = ImageTk.PhotoImage(resized)
+        self.canvas.create_image(
+            0, 0, image=self.photo, anchor=tk.NW, tags="image")
+
+
+def is_valid_path(path):
+    if path.suffix[1:] in IMAGE_EXTENSIONS:
+        return True
+    else:
+        print('[skip]', str(path))
+        return False
+
+
+def labels_in(path_to):
+    path = Path(path_to)
+
+    # gather labels/unlabels
+    labels = list()
+    unlabels = list()
+    for p in path.glob('*'):
+        if p.is_dir():
+            if p.name.startswith('_'):
+                unlabels.append(p.name)
+            else:
+                labels.append(p.name)
+    return labels, unlabels
+
+
+def label_images(path_to, should_only_include_unlabeled=False):
+    data_dir = Path(path_to)
+    labels, unlabels = labels_in(path_to)
+
+    # gather things
+    things = dict()
+    for ext in IMAGE_EXTENSIONS:
+        all_labels = list(unlabels)
+        if not should_only_include_unlabeled:
+            all_labels.extend(labels)
+        for label in all_labels:
+            for p in data_dir.glob('{}/*.{}'.format(label, ext)):
+                if is_valid_path(p):
+                    things[p] = label
+
+    root = tk.Tk()
+    root.title("label")
+
+    App(root, data_dir, labels, things.items())
+
+    # loop
+    root.bind('<Escape>', lambda _: root.quit())
+    root.mainloop()
+
+
+def parse_arguments(argv):
+    parser = argparse.ArgumentParser(
+        description="a simple labeling utility ")
+
+    parser.add_argument('data_directory', type=str,
+                        help='Path to data')
+
+    parser.add_argument('--rename', action="store_true",
+                        help="Rename all files so they have unique names")
+    parser.add_argument('--fake-rename', action="store_true",
+                        help="Show what would happen if rename is used")
+
+    parser.add_argument('--pack', type=str,
+                        help="Pack labeled data into a gzipped tarball")
+    parser.add_argument('--unlabeled', action='store_true',
+                        help="Only label unlabeled data")
+    return parser.parse_args(argv)
+
+
+if __name__ == '__main__':
+    args = parse_arguments(sys.argv[1:])
+    if args.rename or args.fake_rename:
+        from base64 import urlsafe_b64encode as encode
+        data_dir = Path(args.data_directory)
+        for p in data_dir.glob("**/*"):
+            if p.is_dir():
+                continue
+
+            if not p.parent.name.startswith('_'):
+                # ignore labeled files
+                continue
+
+            # encode the path to get a unique code
+            code = encode(bytes(p)).decode('utf8')
+            new_path = p.with_name("{}.{}{}".format(p.stem, code, p.suffix))
+            if args.fake_rename:
+                print(str(p), '=>', str(new_path))
+            else:
+                p.rename(new_path)
+    elif args.pack is not None:
+        import tarfile
+        t = tarfile.open(args.pack, "w:gz")
+        labels, _ = labels_in(args.data_directory)
+        data_dir = Path(args.data_directory)
+        for l in labels:
+            for fn in data_dir.glob('{}/*'.format(l)):
+                t.add(str(fn))
+        t.close()
+    else:
+        label_images(args.data_directory, args.unlabeled)
