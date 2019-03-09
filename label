@@ -318,8 +318,8 @@ if __name__ == '__main__':
         labels, _ = labels_in(args.data_directory)
         data_dir = Path(args.data_directory)
         for l in labels:
-            for fn in data_dir.glob('{}/*'.format(l)):
-                t.add(str(fn))
+            for p in data_dir.glob('{}/*'.format(l)):
+                t.add(str(p))
         t.close()
     else:
         label_images(args.data_directory, args.unlabeled)
