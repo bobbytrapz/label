@@ -115,7 +115,6 @@ class App(ttk.Frame):
 
         path, label = self.thing
         new_label = new_label or self.entry_var.get()
-        self.things[self.ndx] = (path, new_label)
         self.entry_var.set("")
 
         if label == new_label:
@@ -135,9 +134,10 @@ class App(ttk.Frame):
             return
 
         # move image to label directory
-        out = self.data_dir / new_label / path.name
-        print("[label]", self.name, '=>', out)
-        path.rename(out)
+        new_path = self.data_dir / new_label / path.name
+        self.things[self.ndx] = (new_path, new_label)
+        print("[label]", self.name, '=>', new_path)
+        path.rename(new_path)
         self.next()
 
     @property
