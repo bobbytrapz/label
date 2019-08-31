@@ -202,6 +202,9 @@ class App(ttk.Frame):
             self.show_done()
             return
 
+        self.main.title("label [{} of {}]".format(
+            self.ndx+1, len(self.things)))
+
         self.canvas.delete(tk.ALL)
         self.title_var.set("{} [{} of {}]".format(
             self.name, self.ndx, len(self.things)))
