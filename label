@@ -55,7 +55,8 @@ class App(ttk.Frame):
         self.entry = ttk.Entry(self.labeling, textvariable=self.entry_var)
         self.entry.pack(side="bottom", fill="x", ipady=10)
 
-        self.entry.bind("<Return>", lambda _: self.set_label())
+        self.entry.bind("<Return>", lambda _: self.set_label_as_entry())
+        self.main.bind('<BackSpace>', lambda _: self.set_label("_unlabeled"))
 
         self._make_buttons()
 
@@ -109,34 +110,32 @@ class App(ttk.Frame):
         ndx = min(self.ndx, len(self.things) - 1)
         return self.things[ndx][1]
 
-    def set_label(self, new_label=None):
+    def set_label_as_entry(self):
+        label_entry = self.entry_var.get()
+        if label_entry in self.labels:
+            self.entry_var.set("")
+            self.set_label(label_entry)
+        else:
+            print("[label]", "invalid label '{}'".format(label_entry))
+            return
+
+    def set_label(self, new_label):
         if self.is_done:
             return
 
         path, label = self.thing
-        new_label = new_label or self.entry_var.get()
-        self.entry_var.set("")
 
         if label == new_label:
             # same label so just go to next one
             self.next()
             return
 
-        if new_label == "":
-            # skip this one
-            self.next()
-            return
-
-        if new_label not in self.labels:
-            print("[label]", "invalid label '{}'".format(new_label))
-            # reset entry field so user may correct input
-            self.entry_var.set(new_label)
-            return
-
         # move image to label directory
-        new_path = self.data_dir / new_label / path.name
-        self.things[self.ndx] = (new_path, new_label)
+        dst_path = self.data_dir / new_label
+        dst_path.mkdir(parents=True, exist_ok=True)
+        new_path = dst_path / path.name
         print("[label]", self.name, '=>', new_path)
+        self.things[self.ndx] = (new_path, new_label)
         path.rename(new_path)
         self.next()
 
