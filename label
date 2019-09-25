@@ -233,8 +233,10 @@ def labels_in(path_to):
     unlabels = list()
     for p in path.glob('*'):
         if p.is_dir():
-            if p.name.startswith('_'):
+            if p.name == '_unlabeled':
                 unlabels.append(p.name)
+            elif p.name.startswith('_'):
+                continue
             else:
                 labels.append(p.name)
     return labels, unlabels
