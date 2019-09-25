@@ -242,7 +242,7 @@ def labels_in(path_to):
     return labels, unlabels
 
 
-def label_images(path_to, should_only_include_unlabeled=False):
+def label_images(path_to, should_include_labeled=False):
     data_dir = Path(path_to)
     labels, unlabels = labels_in(path_to)
 
@@ -250,7 +250,7 @@ def label_images(path_to, should_only_include_unlabeled=False):
     things = dict()
     for ext in IMAGE_EXTENSIONS:
         all_labels = list(unlabels)
-        if not should_only_include_unlabeled:
+        if should_include_labeled:
             all_labels.extend(labels)
         for label in all_labels:
             for p in data_dir.glob('{}/*.{}'.format(label, ext)):
@@ -281,8 +281,8 @@ def parse_arguments(argv):
 
     parser.add_argument('--pack', type=str,
                         help="Pack labeled data into a gzipped tarball")
-    parser.add_argument('--unlabeled', action='store_true',
-                        help="Only label unlabeled data")
+    parser.add_argument('--labeled', action='store_true',
+                        help="Include data that is already labeled")
     return parser.parse_args(argv)
 
 
@@ -316,4 +316,4 @@ if __name__ == '__main__':
                 t.add(str(p))
         t.close()
     else:
-        label_images(args.data_directory, args.unlabeled)
+        label_images(args.data_directory, args.labeled)
