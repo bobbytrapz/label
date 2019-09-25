@@ -75,6 +75,7 @@ class App(ttk.Frame):
         self.canvas.bind('<ButtonPress>', self._canvas_click)
         self.main.bind('<Left>', lambda _: self.prev())
         self.main.bind('<Right>', lambda _: self.next())
+        self.main.bind('<space>', lambda _: self.next())
 
         # load image
         self.ndx = 0
