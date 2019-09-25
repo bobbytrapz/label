@@ -248,10 +248,10 @@ def label_images(path_to, should_include_labeled=False):
 
     # gather things
     things = dict()
+    all_labels = list(unlabels)
+    if should_include_labeled:
+        all_labels.extend(labels)
     for ext in IMAGE_EXTENSIONS:
-        all_labels = list(unlabels)
-        if should_include_labeled:
-            all_labels.extend(labels)
         for label in all_labels:
             for p in data_dir.glob('{}/*.{}'.format(label, ext)):
                 if is_valid_path(p):
