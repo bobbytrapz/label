@@ -240,7 +240,7 @@ def labels_in(path_to):
                 continue
             else:
                 labels.append(p.name)
-    return labels, unlabels
+    return sorted(labels), sorted(unlabels)
 
 
 def label_images(path_to, should_include_labeled=False):
